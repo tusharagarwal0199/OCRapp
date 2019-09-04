@@ -59,78 +59,80 @@ public class MainActivity extends AppCompatActivity {
         button2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String s = v.toString();
-                if (s.equalsIgnoreCase("stop")) {
-                    cameraSource.stop();
+                String s = button2.getText().toString();
+                if (s.equalsIgnoreCase("STOP")) {
                     button2.setText("START");
                 } else {
                     button2.setText("STOP");
-                    TextRecognizer textRecognizer = new TextRecognizer.Builder(getApplicationContext()).build();
-                    if (!textRecognizer.isOperational()) {
-                        Log.w("MainActivity", "DD not av");
-                    } else {
-                        cameraSource = new CameraSource.Builder(getApplicationContext(), textRecognizer)
-                                .setFacing(CameraSource.CAMERA_FACING_BACK).setRequestedPreviewSize(1280, 1024)
-                                .setRequestedFps(2.0f)
-                                .setAutoFocusEnabled(true)
-                                .build();
-                        surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
+
+                }
+            }
+        });
+        TextRecognizer textRecognizer = new TextRecognizer.Builder(getApplicationContext()).build();
+        if (!textRecognizer.isOperational()) {
+            Log.w("MainActivity", "DD not av");
+        } else {
+            cameraSource = new CameraSource.Builder(getApplicationContext(), textRecognizer)
+                    .setFacing(CameraSource.CAMERA_FACING_BACK).setRequestedPreviewSize(1280, 1024)
+                    .setRequestedFps(2.0f)
+                    .setAutoFocusEnabled(true)
+                    .build();
+            surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
+                @Override
+                public void surfaceCreated(SurfaceHolder holder) {
+                    try {
+                        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, CameraPermissionId);
+                            return;
+                        }
+                        cameraSource.start(surfaceView.getHolder());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+
+                }
+
+                @Override
+                public void surfaceDestroyed(SurfaceHolder holder) {
+                    cameraSource.stop();
+                }
+            });
+
+            textRecognizer.setProcessor(new Detector.Processor<TextBlock>() {
+                @Override
+                public void release() {
+
+                }
+
+                @Override
+                public void receiveDetections(Detector.Detections<TextBlock> detections) {
+                    final SparseArray<TextBlock> items = detections.getDetectedItems();
+                    if (items.size() != 0)
+                    {
+                        textView.post(new Runnable() {
                             @Override
-                            public void surfaceCreated(SurfaceHolder holder) {
-                                try {
-                                    if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, CameraPermissionId);
-                                        return;
-                                    }
-                                    cameraSource.start(surfaceView.getHolder());
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-
-                            @Override
-                            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
-                            }
-
-                            @Override
-                            public void surfaceDestroyed(SurfaceHolder holder) {
-                                cameraSource.stop();
-                            }
-                        });
-
-                        textRecognizer.setProcessor(new Detector.Processor<TextBlock>() {
-                            @Override
-                            public void release() {
-
-                            }
-
-                            @Override
-                            public void receiveDetections(Detector.Detections<TextBlock> detections) {
-                                final SparseArray<TextBlock> items = detections.getDetectedItems();
-                                if (items.size() != 0)
+                            public void run() {
+                                StringBuilder sb= new StringBuilder();
+                                for(int i=0;i<items.size();i++)
                                 {
-                                    textView.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            StringBuilder sb= new StringBuilder();
-                                            for(int i=0;i<items.size();i++)
-                                            {
-                                                TextBlock item = items.valueAt(i);
-                                                sb.append(item.getValue()+"\n");
-                                            }
-                                            textView.setText(sb.toString());
-                                        }
-                                    });
+                                    TextBlock item = items.valueAt(i);
+                                    sb.append(item.getValue()+"\n");
                                 }
+                                if (button2.getText().toString().equalsIgnoreCase("STOP"))
+                                textView.setText(sb.toString());
                             }
                         });
                     }
                 }
+            });
+        }
 
-            }
-        });
-        button3 = (Button) findViewById(R.id.button3);
+
+    button3 = (Button) findViewById(R.id.button3);
         button3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
